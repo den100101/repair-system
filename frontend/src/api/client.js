@@ -1,15 +1,15 @@
-import axios from 'axios'
+import axios from "axios";
 
 const client = axios.create({
-  baseURL: '/api',
-})
+  baseURL: `${import.meta.env.VITE_API_URL}/api`,
+});
 
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('tapalla_token')
+  const token = localStorage.getItem("tapalla_token");
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  return config
-})
+  return config;
+});
 
-export default client
+export default client;
