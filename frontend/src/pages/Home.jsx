@@ -35,12 +35,30 @@ const WHY = [
 
 export default function Home() {
   const [services, setServices] = useState([]);
+  const [loadingServices, setLoadingServices] = useState(true);
 
   useEffect(() => {
     client
       .get("/repairs/services")
-      .then((res) => setServices(res.data))
-      .catch(() => setServices([]));
+      .then((res) => {
+        const data = res.data;
+
+        if (Array.isArray(data)) {
+          setServices(data);
+        } else if (Array.isArray(data.services)) {
+          setServices(data.services);
+        } else {
+          console.error("Unexpected services response:", data);
+          setServices([]);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch services:", err);
+        setServices([]);
+      })
+      .finally(() => {
+        setLoadingServices(false);
+      });
   }, []);
 
   return (
@@ -94,9 +112,16 @@ export default function Home() {
             precision.
           </p>
           <div className="grid grid-4 mt-lg">
-            {services.length === 0 && (
+            {loadingServices && (
               <p className="muted small text-center">Loading services...</p>
             )}
+
+            {!loadingServices && services.length === 0 && (
+              <p className="muted small text-center">
+                No repair services available.
+              </p>
+            )}
+
             {services.map((s) => (
               <div key={s.id} className="card service-card">
                 {SERVICE_IMAGES[s.name] && (

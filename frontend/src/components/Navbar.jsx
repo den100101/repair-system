@@ -6,6 +6,8 @@ import LogoutButton from "./LogoutButton";
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
   const isStaff = user && (user.role === "admin" || user.role === "technician");
 
   const handleAccountClick = () => {
@@ -47,13 +49,16 @@ export default function Navbar() {
               <span className="navbar-greeting">
                 Hi, {user.full_name.split(" ")[0]}
               </span>
+
               {isStaff && <NotificationBell />}
+
               <button
                 onClick={handleAccountClick}
                 className="btn btn-secondary btn-sm"
               >
                 {user.role === "customer" ? "Dashboard" : "Admin Panel"}
               </button>
+
               <LogoutButton
                 className="link-btn small"
                 style={{ color: "var(--color-gray-500)" }}
