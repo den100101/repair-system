@@ -1,6 +1,6 @@
 import csv
 import io
-from datetime import datetime, date as date_cls
+from datetime import datetime, timedelta, date as date_cls
 from functools import wraps
 from flask import Blueprint, request, jsonify, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
@@ -274,6 +274,82 @@ def add_note(order_id):
     db.session.add(message)
     db.session.commit()
     return jsonify(message.to_dict()), 201
+
+
+@admin_bp.route("/analytics", methods=["GET"])
+@staff_required
+def analytics():
+    now = datetime.utcnow()
+    today = now.date()
+
+    # Requests per day, last 7 days
+    week_start = datetime.combine(today - timedelta(days=6), datetime.min.time())
+    per_day = {today - timedelta(days=i): 0 for i in range(6, -1, -1)}
+    for r in RepairRequest.query.filter(RepairRequest.submitted_at >= week_start).all():
+        d = r.submitted_at.date()
+        if d in per_day:
+            per_day[d] += 1
+    daily_requests = [{"label": d.strftime("%a"), "count": c} for d, c in per_day.items()]
+
+    # Revenue per month (last 6 months, completed repairs) + average turnaround
+    months, y, m = [], now.year, now.month
+    for _ in range(6):
+        months.append((y, m))
+        m -= 1
+        if m == 0:
+            y, m = y - 1, 12
+    months.reverse()
+    revenue = {k: 0.0 for k in months}
+    turnaround = []
+    for r in RepairRequest.query.filter_by(status="Quality Check & Done").all():
+        if not r.updated_at:
+            continue
+        key = (r.updated_at.year, r.updated_at.month)
+        if key in revenue:
+            revenue[key] += float(r.estimated_cost or 0)
+        if r.submitted_at:
+            turnaround.append((r.updated_at - r.submitted_at).total_seconds() / 86400)
+    monthly_revenue = [
+        {"label": date_cls(yy, mm, 1).strftime("%b"), "amount": amt}
+        for (yy, mm), amt in revenue.items()
+    ]
+
+    by_category = {
+        (cat or "Other"): count
+        for cat, count in db.session.query(
+            RepairRequest.appliance_category, db.func.count(RepairRequest.id)
+        ).group_by(RepairRequest.appliance_category).all()
+    }
+
+    return jsonify({
+        "daily_requests": daily_requests,
+        "monthly_revenue": monthly_revenue,
+        "by_category": by_category,
+        "avg_turnaround_days": round(sum(turnaround) / len(turnaround), 1) if turnaround else None,
+    })
+
+
+@admin_bp.route("/repairs/<order_id>/assign", methods=["PATCH"])
+@staff_required
+def assign_technician(order_id):
+    repair = RepairRequest.query.filter_by(order_id=order_id).first_or_404()
+    data = request.get_json() or {}
+    tech_id = data.get("technician_id") or None
+    tech = None
+    if tech_id:
+        tech = User.query.filter(
+            User.id == tech_id, User.role.in_(["admin", "technician"])
+        ).first()
+        if not tech:
+            return jsonify({"error": "Technician not found"}), 404
+    repair.technician_id = tech.id if tech else None
+    db.session.add(Notification(
+        repair_id=repair.id,
+        label=f"Technician Assigned: {tech.full_name}" if tech else "Technician Unassigned",
+        delivery_status="Sent",
+    ))
+    db.session.commit()
+    return jsonify(repair.to_detail_dict(include_internal=True))
 
 
 @admin_bp.route("/technicians", methods=["GET"])

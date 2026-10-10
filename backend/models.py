@@ -288,6 +288,7 @@ class RepairRequest(db.Model):
             "est_completion": self.est_completion.isoformat() if self.est_completion else None,
             "customer_name": self.customer.full_name if self.customer else None,
             "quotation_status": self.quotation.status if self.quotation else None,
+            "technician_name": self.technician.full_name if self.technician else None,
         }
 
     def to_detail_dict(self, include_internal=False):

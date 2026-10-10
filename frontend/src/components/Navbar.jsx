@@ -1,52 +1,76 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../api/AuthContext'
-import logo from '../assets/logo.png'
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../api/AuthContext";
+import logo from "../assets/logo.png";
+import NotificationBell from "./NotificationBell";
+import LogoutButton from "./LogoutButton";
 
 export default function Navbar() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const isStaff = user && (user.role === "admin" || user.role === "technician");
 
   const handleAccountClick = () => {
     if (!user) {
-      navigate('/login')
-    } else if (user.role === 'customer') {
-      navigate('/dashboard')
+      navigate("/login");
+    } else if (user.role === "customer") {
+      navigate("/dashboard");
     } else {
-      navigate('/admin')
+      navigate("/admin");
     }
-  }
+  };
 
   return (
     <header className="navbar">
       <div className="navbar-inner">
         <div className="navbar-links">
-          <Link to="/" className="navbar-link">Home</Link>
-          <Link to="/book-repair" className="navbar-link">Book Repair</Link>
+          <Link to="/" className="navbar-link">
+            Home
+          </Link>
+          <Link to="/book-repair" className="navbar-link">
+            Book Repair
+          </Link>
         </div>
 
         <Link to="/" className="navbar-brand">
-          <img src={logo} alt="Tapalla's Electronic Repair" className="navbar-logo" />
-          <span className="navbar-brand-text">Tapalla&apos;s Electronic Repair</span>
+          <img
+            src={logo}
+            alt="Tapalla's Electronic Repair"
+            className="navbar-logo"
+          />
+          <span className="navbar-brand-text">
+            Tapalla&apos;s Electronic Repair
+          </span>
         </Link>
 
         <div className="navbar-actions">
           {user ? (
             <>
-              <span className="navbar-greeting">Hi, {user.full_name.split(' ')[0]}</span>
-              <button onClick={handleAccountClick} className="btn btn-secondary btn-sm">
-                {user.role === 'customer' ? 'Dashboard' : 'Admin Panel'}
+              <span className="navbar-greeting">
+                Hi, {user.full_name.split(" ")[0]}
+              </span>
+              {isStaff && <NotificationBell />}
+              <button
+                onClick={handleAccountClick}
+                className="btn btn-secondary btn-sm"
+              >
+                {user.role === "customer" ? "Dashboard" : "Admin Panel"}
               </button>
-              <button onClick={logout} className="link-btn small" style={{ color: 'var(--color-gray-500)' }}>
+              <LogoutButton
+                className="link-btn small"
+                style={{ color: "var(--color-gray-500)" }}
+              >
                 Logout
-              </button>
+              </LogoutButton>
             </>
           ) : (
-            <button onClick={handleAccountClick} className="btn btn-secondary btn-sm">
+            <button
+              onClick={handleAccountClick}
+              className="btn btn-secondary btn-sm"
+            >
               Customer Login
             </button>
           )}
         </div>
       </div>
     </header>
-  )
+  );
 }

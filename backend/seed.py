@@ -27,16 +27,16 @@ with app.app_context():
         # --- Staff ---
         admin = User(
             full_name="Ni\u00f1a Rita Tapalla",
-            email="admin@tapalla-repair.com",
-            phone="+63 908 637 7627",
+            email="admin.tapalla@gmail.com",
+            phone="+63 918 558 3751",
             role="admin",
         )
-        admin.set_password("admin123")
+        admin.set_password("admin.tapalla")
 
-        tech1 = User(full_name="Andrew Tapalla", email="andrew@tapalla-repair.com", role="technician")
-        tech1.set_password("tech123")
-        tech2 = User(full_name="Michael Tapalla", email="michael@tapalla-repair.com", role="technician")
-        tech2.set_password("tech123")
+        tech1 = User(full_name="Andrew T. Tapalla", email="andrewtapalla2001_@gmail.com", role="technician")
+        tech1.set_password("andrew2001")
+        tech2 = User(full_name="Michael T. Tapalla", email="mail.tapallamichael@gmail.com", role="technician")
+        tech2.set_password("michael.tapalla")
 
         db.session.add_all([admin, tech1, tech2])
         db.session.flush()
@@ -213,6 +213,3 @@ with app.app_context():
         )
 
         db.session.commit()
-        print("Seed complete.")
-        print("Admin login:    admin@tapalla-repair.com / admin123")
-        print("Customer login: juan.dcruz@email.com / customer123")

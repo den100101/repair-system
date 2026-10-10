@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import logo from '../assets/logo.png'
+import { Link } from "react-router-dom";
+import logo from "../assets/logo.png";
 
 export default function Footer() {
   return (
@@ -8,9 +8,14 @@ export default function Footer() {
         <div>
           <div className="footer-brand">
             <img src={logo} alt="logo" className="footer-logo" />
-            <span className="navbar-brand-text">Tapalla&apos;s Electronic Repair</span>
+            <span className="navbar-brand-text">
+              Tapalla&apos;s Electronic Repair
+            </span>
           </div>
-          <p className="muted">Professional electronic repair services. Trust us with your home appliances.</p>
+          <p className="muted">
+            Professional electronic repair services. Trust us with your home
+            appliances.
+          </p>
         </div>
         <div>
           <h4 className="footer-heading">Services</h4>
@@ -32,7 +37,11 @@ export default function Footer() {
         </div>
         <div>
           <h4 className="footer-heading">Account Access</h4>
-          <Link to="/login" className="btn btn-secondary btn-sm btn-block" style={{ marginBottom: 10 }}>
+          <Link
+            to="/login"
+            className="btn btn-secondary btn-sm btn-block"
+            style={{ marginBottom: 10 }}
+          >
             Customer Portal
           </Link>
           <Link to="/admin-login" className="muted small">
@@ -44,5 +53,5 @@ export default function Footer() {
         Copyright 2018 Tapalla&apos;s Electronic Repair. All rights reserved.
       </div>
     </footer>
-  )
+  );
 }

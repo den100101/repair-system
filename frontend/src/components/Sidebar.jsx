@@ -1,9 +1,7 @@
-import { NavLink } from 'react-router-dom'
-import { useAuth } from '../api/AuthContext'
+import { NavLink } from "react-router-dom";
+import LogoutButton from "./LogoutButton";
 
 export default function Sidebar({ items }) {
-  const { logout } = useAuth()
-
   return (
     <aside className="sidebar">
       <nav className="sidebar-nav">
@@ -12,15 +10,15 @@ export default function Sidebar({ items }) {
             key={item.to}
             to={item.to}
             end={item.end}
-            className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+            className={({ isActive }) =>
+              `sidebar-link${isActive ? " active" : ""}`
+            }
           >
             {item.label}
           </NavLink>
         ))}
       </nav>
-      <button onClick={logout} className="sidebar-logout">
-        Logout
-      </button>
+      <LogoutButton className="sidebar-logout">Logout</LogoutButton>
     </aside>
-  )
+  );
 }

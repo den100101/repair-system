@@ -1,63 +1,92 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
-import Sidebar from '../components/Sidebar'
-import StatusBadge from '../components/StatusBadge'
-import PriorityBadge from '../components/PriorityBadge'
-import client from '../api/client'
+import { useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import Sidebar from "../components/Sidebar";
+import StatusBadge from "../components/StatusBadge";
+import PriorityBadge from "../components/PriorityBadge";
+import client from "../api/client";
 
 const SIDEBAR_ITEMS = [
-  { to: '/admin', label: 'Overview', end: true },
-  { to: '/admin/services', label: 'Services' },
-  { to: '/admin/inventory', label: 'Inventory' },
-  { to: '/admin/reports', label: 'Reports' },
-]
+  { to: "/admin", label: "Overview", end: true },
+  { to: "/admin/services", label: "Services" },
+  { to: "/admin/inventory", label: "Inventory" },
+  { to: "/admin/reports", label: "Reports" },
+];
 
-const FILTERS = ['All', 'Submitted', 'Under Review', 'Approved & Scheduled', 'In Repair', 'Quality Check & Done']
+const FILTERS = [
+  "All",
+  "Submitted",
+  "Under Review",
+  "Approved & Scheduled",
+  "In Repair",
+  "Quality Check & Done",
+];
 
 function timeAgo(iso) {
-  const diffMs = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diffMs / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function BarChart({ data, valueKey, format = (v) => v }) {
+  const max = Math.max(...data.map((d) => d[valueKey]), 1);
+  return (
+    <div className="report-bars">
+      {data.map((d) => (
+        <div key={d.label} className="report-bar-col">
+          <span className="report-bar-label">{format(d[valueKey])}</span>
+          <div
+            className="report-bar"
+            style={{ height: `${(d[valueKey] / max) * 70}%`, minHeight: 2 }}
+          />
+          <span className="report-bar-label">{d.label}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function AdminDashboard() {
-  const navigate = useNavigate()
-  const [stats, setStats] = useState(null)
-  const [repairs, setRepairs] = useState([])
-  const [technicians, setTechnicians] = useState([])
-  const [activity, setActivity] = useState([])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('All')
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate();
+  const [analytics, setAnalytics] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [repairs, setRepairs] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
 
   const loadRepairs = () => {
-    const params = {}
-    if (search) params.search = search
-    if (statusFilter !== 'All') params.status = statusFilter
-    return client.get('/admin/repairs', { params }).then((res) => setRepairs(res.data.repairs))
-  }
+    const params = {};
+    if (search) params.search = search;
+    if (statusFilter !== "All") params.status = statusFilter;
+    return client
+      .get("/admin/repairs", { params })
+      .then((res) => setRepairs(res.data.repairs));
+  };
 
   useEffect(() => {
-    setLoading(true)
+    setLoading(true);
     Promise.all([
-      client.get('/admin/stats').then((res) => setStats(res.data)),
+      client.get("/admin/stats").then((res) => setStats(res.data)),
+      client.get("/admin/analytics").then((res) => setAnalytics(res.data)),
       loadRepairs(),
-      client.get('/admin/technicians').then((res) => setTechnicians(res.data)),
-      client.get('/admin/activity').then((res) => setActivity(res.data)),
-    ]).finally(() => setLoading(false))
+      client.get("/admin/technicians").then((res) => setTechnicians(res.data)),
+      client.get("/admin/activity").then((res) => setActivity(res.data)),
+    ]).finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   useEffect(() => {
-    loadRepairs()
+    loadRepairs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statusFilter])
+  }, [search, statusFilter]);
 
   return (
     <div className="page">
@@ -69,16 +98,24 @@ export default function AdminDashboard() {
           <div className="dashboard-header">
             <div>
               <h1 className="dashboard-title">Admin Dashboard</h1>
-              <p className="muted small">Manage repair requests, communicate with clients, and monitor shop performance.</p>
+              <p className="muted small">
+                Manage repair requests, communicate with clients, and monitor
+                shop performance.
+              </p>
             </div>
-            <Link to="/admin/reports" className="btn btn-secondary btn-sm">Export Report</Link>
+            <Link to="/admin/reports" className="btn btn-secondary btn-sm">
+              Export Report
+            </Link>
           </div>
 
           {loading ? (
             <p className="muted mt-lg">Loading...</p>
           ) : (
             <>
-              <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+              <div
+                className="stat-grid"
+                style={{ gridTemplateColumns: "repeat(6, 1fr)" }}
+              >
                 <div className="card stat-card">
                   <p className="stat-label">New Requests</p>
                   <p className="stat-value">{stats.new_requests}</p>
@@ -93,7 +130,9 @@ export default function AdminDashboard() {
                 </div>
                 <div className="card stat-card">
                   <p className="stat-label">Mo. Revenue</p>
-                  <p className="stat-value">PHP {stats.monthly_revenue.toLocaleString()}</p>
+                  <p className="stat-value">
+                    PHP {stats.monthly_revenue.toLocaleString()}
+                  </p>
                 </div>
                 <Link to="/admin" className="card stat-card">
                   <p className="stat-label">Pending Quotes</p>
@@ -101,11 +140,54 @@ export default function AdminDashboard() {
                 </Link>
                 <Link to="/admin/inventory" className="card stat-card">
                   <p className="stat-label">Low Stock Parts</p>
-                  <p className={`stat-value${stats.low_stock_parts > 0 ? ' warn' : ''}`}>
+                  <p
+                    className={`stat-value${stats.low_stock_parts > 0 ? " warn" : ""}`}
+                  >
                     {stats.low_stock_parts}
                   </p>
                 </Link>
               </div>
+              {analytics && (
+                <>
+                  <div className="grid grid-2" style={{ marginTop: 24 }}>
+                    <div className="card panel" style={{ marginTop: 0 }}>
+                      <p className="panel-title mb-xs">Requests, Last 7 Days</p>
+                      <p className="panel-subtext">
+                        Average turnaround:{" "}
+                        {analytics.avg_turnaround_days ?? "N/A"} days
+                      </p>
+                      <BarChart
+                        data={analytics.daily_requests}
+                        valueKey="count"
+                      />
+                    </div>
+                    <div className="card panel" style={{ marginTop: 0 }}>
+                      <p className="panel-title mb-xs">
+                        Revenue, Last 6 Months
+                      </p>
+                      <p className="panel-subtext">
+                        Completed repairs only (PHP)
+                      </p>
+                      <BarChart
+                        data={analytics.monthly_revenue}
+                        valueKey="amount"
+                        format={(v) => v.toLocaleString()}
+                      />
+                    </div>
+                  </div>
+                  <div className="card panel">
+                    <p className="panel-title mb-sm">Repairs by Service</p>
+                    {Object.entries(analytics.by_category).map(
+                      ([cat, count]) => (
+                        <div key={cat} className="parts-row">
+                          <span>{cat}</span>
+                          <span style={{ fontWeight: 600 }}>{count}</span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </>
+              )}
 
               <div className="card panel">
                 <div className="toolbar">
@@ -121,7 +203,7 @@ export default function AdminDashboard() {
                       <button
                         key={f}
                         onClick={() => setStatusFilter(f)}
-                        className={`filter-chip${statusFilter === f ? ' active' : ''}`}
+                        className={`filter-chip${statusFilter === f ? " active" : ""}`}
                       >
                         {f}
                       </button>
@@ -143,20 +225,40 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody>
                       {repairs.map((r) => (
-                        <tr key={r.order_id} className="clickable" onClick={() => navigate(`/repairs/${r.order_id}`)}>
+                        <tr
+                          key={r.order_id}
+                          className="clickable"
+                          onClick={() => navigate(`/repairs/${r.order_id}`)}
+                        >
                           <td className="order-id">{r.order_id}</td>
                           <td>{r.customer_name}</td>
                           <td>{r.device_model}</td>
                           <td className="muted">
-                            {r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : 'N/A'}
+                            {r.submitted_at
+                              ? new Date(r.submitted_at).toLocaleDateString()
+                              : "N/A"}
                           </td>
-                          <td><StatusBadge status={r.status} /></td>
-                          <td><PriorityBadge priority={r.priority} /></td>
+                          <td>
+                            <StatusBadge status={r.status} />
+                          </td>
+                          <td>
+                            <PriorityBadge priority={r.priority} />
+                          </td>
+                          <td>
+                            <PriorityBadge priority={r.priority} />
+                          </td>
+                          <td>
+                            {r.technician_name || (
+                              <span className="muted">Unassigned</span>
+                            )}
+                          </td>
                         </tr>
                       ))}
                       {repairs.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="empty-row">No requests match your filters.</td>
+                          <td colSpan={7} className="empty-row">
+                            No requests match your filters.
+                          </td>
                         </tr>
                       )}
                     </tbody>
@@ -167,32 +269,51 @@ export default function AdminDashboard() {
               <div className="grid grid-2" style={{ marginTop: 24 }}>
                 <div className="card panel" style={{ marginTop: 0 }}>
                   <p className="panel-title mb-xs">Real-time Activity</p>
-                  <p className="panel-subtext mb-sm">Live updates from customers and staff</p>
+                  <p className="panel-subtext mb-sm">
+                    Live updates from customers and staff
+                  </p>
                   <ul className="activity-list">
                     {activity.map((a, i) => (
                       <li key={i}>
                         <span className="activity-bullet">-</span>
                         <span>
-                          <strong>{a.actor}</strong> updated <strong>{a.repair_order_id}</strong> to &quot;{a.status}&quot;
-                          <span className="muted"> ({timeAgo(a.timestamp)})</span>
+                          <strong>{a.actor}</strong> updated{" "}
+                          <strong>{a.repair_order_id}</strong> to &quot;
+                          {a.status}&quot;
+                          <span className="muted">
+                            {" "}
+                            ({timeAgo(a.timestamp)})
+                          </span>
                         </span>
                       </li>
                     ))}
-                    {activity.length === 0 && <p className="muted">No recent activity.</p>}
+                    {activity.length === 0 && (
+                      <p className="muted">No recent activity.</p>
+                    )}
                   </ul>
                 </div>
 
                 <div className="card panel" style={{ marginTop: 0 }}>
                   <p className="panel-title mb-xs">Shop Floor Status</p>
-                  <p className="panel-subtext mb-sm">Current workload per technician</p>
+                  <p className="panel-subtext mb-sm">
+                    Current workload per technician
+                  </p>
                   {technicians.map((t) => (
                     <div className="workload-item" key={t.id}>
                       <div className="workload-header">
-                        <span style={{ fontWeight: 600 }}>{t.name} <span className="muted small">({t.title})</span></span>
-                        <span className="muted">{t.active_jobs} Active Jobs</span>
+                        <span style={{ fontWeight: 600 }}>
+                          {t.name}{" "}
+                          <span className="muted small">({t.title})</span>
+                        </span>
+                        <span className="muted">
+                          {t.active_jobs} Active Jobs
+                        </span>
                       </div>
                       <div className="workload-bar-track">
-                        <div className="workload-bar-fill" style={{ width: `${t.capacity_percent}%` }} />
+                        <div
+                          className="workload-bar-fill"
+                          style={{ width: `${t.capacity_percent}%` }}
+                        />
                       </div>
                     </div>
                   ))}
@@ -204,5 +325,5 @@ export default function AdminDashboard() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }
