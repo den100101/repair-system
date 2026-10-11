@@ -53,13 +53,6 @@ export default function BookRepair() {
     (s) => String(s.id) === String(form.service_id),
   );
 
-  const canNext = () => {
-    if (step === 0) return form.full_name && form.phone && form.email;
-    if (step === 1) return form.service_id && form.device_model;
-    if (step === 2) return form.preferred_date && form.preferred_slot;
-    return true;
-  };
-
   const handleNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const handleBack = () => setStep((s) => Math.max(s - 1, 0));
 
