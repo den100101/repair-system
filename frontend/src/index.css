@@ -1792,3 +1792,30 @@ table.data-table {
   font-size: 13px;
   color: var(--color-gray-400);
 }
+
+.privacy-note > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.privacy-note > div strong {
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.privacy-note input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-blue);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.privacy-note input[type="radio"]:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 3px;
+}

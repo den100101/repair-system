@@ -12,6 +12,7 @@ export default function BookRepair() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [confirmedOrderId, setConfirmedOrderId] = useState(null);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   const [services, setServices] = useState([]);
   const [slots, setSlots] = useState([]);
@@ -75,6 +76,26 @@ export default function BookRepair() {
     } finally {
       setSubmitting(false);
     }
+  };
+  const canNext = () => {
+    if (step === 0) {
+      return (
+        privacyAccepted &&
+        form.full_name.trim() &&
+        form.phone.trim() &&
+        form.email.trim()
+      );
+    }
+
+    if (step === 1) {
+      return form.service_id && form.device_model.trim();
+    }
+
+    if (step === 2) {
+      return form.preferred_date && form.preferred_slot;
+    }
+
+    return true;
   };
 
   return (
@@ -145,7 +166,12 @@ export default function BookRepair() {
               required by law.
               <div>
                 <strong>I understand</strong>
-                <input type="radio" required />
+                <input
+                  type="radio"
+                  checked={privacyAccepted}
+                  onChange={() => setPrivacyAccepted(true)}
+                  required
+                />
               </div>
             </div>
 
