@@ -13,6 +13,7 @@ export default function BookRepair() {
   const [error, setError] = useState("");
   const [confirmedOrderId, setConfirmedOrderId] = useState(null);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [privacyWarning, setPrivacyWarning] = useState(false);
 
   const [services, setServices] = useState([]);
   const [slots, setSlots] = useState([]);
@@ -53,7 +54,16 @@ export default function BookRepair() {
     (s) => String(s.id) === String(form.service_id),
   );
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  const handleNext = () => {
+    if (step === 0 && !privacyAccepted) {
+      setPrivacyWarning(true);
+      return;
+    }
+
+    setPrivacyWarning(false);
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  };
+
   const handleBack = () => setStep((s) => Math.max(s - 1, 0));
 
   const handleSubmit = async () => {
@@ -162,10 +172,18 @@ export default function BookRepair() {
                 <input
                   type="radio"
                   checked={privacyAccepted}
-                  onChange={() => setPrivacyAccepted(true)}
+                  onChange={() => {
+                    setPrivacyAccepted(true);
+                    setPrivacyWarning(false);
+                  }}
                   required
                 />
               </div>
+              {privacyWarning && (
+                <p className="privacy-warning">
+                  Please click "I understand" before proceeding.
+                </p>
+              )}
             </div>
 
             {step === 0 && (
