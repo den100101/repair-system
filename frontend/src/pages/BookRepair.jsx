@@ -13,7 +13,7 @@ export default function BookRepair() {
   const [error, setError] = useState("");
   const [confirmedOrderId, setConfirmedOrderId] = useState(null);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [privacyWarning, setPrivacyWarning] = useState(false);
+  const [privacyWarning, setPrivacyWarning] = useState(true);
 
   const [services, setServices] = useState([]);
   const [slots, setSlots] = useState([]);
