@@ -215,11 +215,16 @@ export default function Home() {
               </div>
             </div>
             <div className="card map-placeholder">
-              <img
-                src={map}
-                alt="Tapalla Electronics Repair Shop location map"
-                className="map-image"
-              />
+              <a
+                href="https://maps.app.goo.gl/EUcDyN6duAJHBGBh9"
+                target="_blank"
+              >
+                <img
+                  src={map}
+                  alt="Tapalla Electronics Repair Shop location map"
+                  className="map-image"
+                />
+              </a>
             </div>
           </div>
         </section>
