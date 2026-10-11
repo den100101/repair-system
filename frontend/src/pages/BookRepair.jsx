@@ -181,7 +181,8 @@ export default function BookRepair() {
               </div>
               {privacyWarning && (
                 <p className="privacy-warning">
-                  Please click "I understand" before proceeding.
+                  Please click "I understand" to accept the data privacy notice
+                  before proceeding.
                 </p>
               )}
             </div>
