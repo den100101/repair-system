@@ -9,6 +9,7 @@ from flask_jwt_extended import (
     verify_jwt_in_request,
 )
 from extensions import db
+from audit import log_action
 from models import (
     User,
     Service,
@@ -184,6 +185,13 @@ def create_booking():
             delivery_status="Sent",
         )
     )
+    log_action(
+        "repair.created",
+        "repair",
+        repair.order_id,
+        f"{service.name} - {device_model} ({preferred_slot or 'no time slot'})",
+        user=customer,
+    )
     db.session.commit()
 
     return jsonify(repair.to_detail_dict()), 201
@@ -251,6 +259,7 @@ def upload_photo(order_id):
 
     photo = Photo(repair_id=repair.id, filename=filename, uploaded_by_role=user.role)
     db.session.add(photo)
+    log_action("repair.photo_uploaded", "repair", repair.order_id, f"Uploaded {file.filename}", user=user)
     db.session.commit()
 
     return jsonify(photo.to_dict()), 201
@@ -297,6 +306,13 @@ def decide_quotation(order_id):
         db.session.add(
             StatusHistory(repair_id=repair.id, status="Approved & Scheduled", actor="Customer (via quote approval)")
         )
+     log_action(
+        f"quotation.{decision.lower()}",
+        "repair",
+        repair.order_id,
+        f"Quotation of PHP {repair.quotation.total_amount:,.2f} {decision.lower()} by {user.full_name}",
+        user=user,
+    )
 
     db.session.commit()
     return jsonify(repair.to_detail_dict())

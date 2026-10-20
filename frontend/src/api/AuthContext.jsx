@@ -37,6 +37,10 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => {
+    const token = localStorage.getItem('tapalla_token')
+    if (token) {
+      client.post('/auth/logout', null, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {})
+    }
     localStorage.removeItem('tapalla_token')
     setUser(null)
   }

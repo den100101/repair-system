@@ -1826,3 +1826,28 @@ table.data-table {
   font-weight: 600;
   margin-top: 10px;
 }
+
+.line-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 12px;
+}
+
+.audit-details {
+  max-width: 320px;
+  font-size: 13px;
+  color: var(--color-gray-600);
+  word-break: break-word;
+}
+
+.audit-nowrap {
+  white-space: nowrap;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}

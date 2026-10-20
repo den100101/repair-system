@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import or_
 from extensions import db
+from audit import log_action, snapshot, diff
 from models import (
     User,
     RepairRequest,
@@ -19,6 +20,7 @@ from models import (
     Quotation,
     QuotationItem,
     STATUS_FLOW,
+    AuditLog,
 )
 
 admin_bp = Blueprint("admin", __name__)
@@ -153,6 +155,14 @@ def reports_export():
                 float(r.estimated_cost) if r.estimated_cost else "",
             ]
         )
+        
+    log_action(
+        "report.exported",
+        "report",
+        None,
+        f"CSV export {start_str or 'all'} to {end_str or 'all'} ({len(repairs)} rows)",
+        commit=True,
+    )
 
     filename = f"tapalla-repair-report_{start_str or 'all'}_{end_str or 'all'}.csv"
     return Response(
@@ -220,6 +230,8 @@ def update_status(order_id):
     if new_status not in valid_statuses:
         return jsonify({"error": f"status must be one of {valid_statuses}"}), 400
 
+    old_status = repair.status
+    old_priority = repair.priority
     repair.status = new_status
     if "priority" in data:
         repair.priority = data["priority"]
@@ -238,6 +250,10 @@ def update_status(order_id):
             delivery_status="Sent",
         )
     )
+    changes = [f"status: {old_status} -> {new_status}"]
+    if repair.priority != old_priority:
+        changes.append(f"priority: {old_priority} -> {repair.priority}")
+    log_action("repair.status_changed", "repair", repair.order_id, "; ".join(changes))
     db.session.commit()
     return jsonify(repair.to_detail_dict(include_internal=True))
 
@@ -261,6 +277,7 @@ def add_note(order_id):
         repair.internal_notes = (
             (repair.internal_notes + "\n" if repair.internal_notes else "") + content
         )
+        log_action("repair.internal_note_added", "repair", repair.order_id, content[:120], user=user)
         db.session.commit()
         return jsonify({"internal_notes": repair.internal_notes})
 
@@ -272,6 +289,7 @@ def add_note(order_id):
         visible_to_customer=visible_to_customer,
     )
     db.session.add(message)
+    log_action("repair.note_added", "repair", repair.order_id, content[:120], user=user)
     db.session.commit()
     return jsonify(message.to_dict()), 201
 
@@ -342,12 +360,19 @@ def assign_technician(order_id):
         ).first()
         if not tech:
             return jsonify({"error": "Technician not found"}), 404
+    previous = repair.technician.full_name if repair.technician else "Unassigned"
     repair.technician_id = tech.id if tech else None
     db.session.add(Notification(
         repair_id=repair.id,
         label=f"Technician Assigned: {tech.full_name}" if tech else "Technician Unassigned",
         delivery_status="Sent",
     ))
+    log_action(
+        "repair.technician_assigned",
+        "repair",
+        repair.order_id,
+        f"{previous} -> {tech.full_name if tech else 'Unassigned'}",
+    )
     db.session.commit()
     return jsonify(repair.to_detail_dict(include_internal=True))
 
@@ -403,6 +428,8 @@ def create_service():
         is_active=data.get("is_active", True),
     )
     db.session.add(service)
+    db.session.flush()
+    log_action("service.created", "service", service.id, f"{service.name} (PHP {service.base_price})")
     db.session.commit()
     return jsonify(service.to_dict()), 201
 
@@ -412,6 +439,8 @@ def create_service():
 def update_service(service_id):
     service = Service.query.get_or_404(service_id)
     data = request.get_json() or {}
+    service_fields = ("name", "description", "base_price", "is_active")
+    before = snapshot(service, service_fields)
     if "name" in data:
         service.name = data["name"]
     if "description" in data:
@@ -420,6 +449,7 @@ def update_service(service_id):
         service.base_price = data["base_price"]
     if "is_active" in data:
         service.is_active = data["is_active"]
+    log_action("service.updated", "service", service.id, diff(before, snapshot(service, service_fields)))
     db.session.commit()
     return jsonify(service.to_dict())
 
@@ -431,8 +461,10 @@ def delete_service(service_id):
     in_use = RepairRequest.query.filter_by(service_id=service.id).first()
     if in_use:
         service.is_active = False
+        log_action("service.deactivated", "service", service.id, f"{service.name} is used by existing repairs")
         db.session.commit()
         return jsonify({"message": "Service is referenced by existing repairs — deactivated instead of deleted."})
+    log_action("service.deleted", "service", service.id, service.name)
     db.session.delete(service)
     db.session.commit()
     return jsonify({"message": "Service deleted"})
@@ -464,6 +496,8 @@ def create_part():
         unit_price=data.get("unit_price", 0),
     )
     db.session.add(part)
+    db.session.flush()
+    log_action("part.created", "part", part.id, f"{part.name} (stock {part.stock_qty})")
     db.session.commit()
     return jsonify(part.to_dict()), 201
 
@@ -473,9 +507,12 @@ def create_part():
 def update_part(part_id):
     part = Part.query.get_or_404(part_id)
     data = request.get_json() or {}
-    for field in ("name", "sku", "stock_qty", "reorder_level", "unit_cost", "unit_price"):
+    part_fields = ("name", "sku", "stock_qty", "reorder_level", "unit_cost", "unit_price")
+    before = snapshot(part, part_fields)
+    for field in part_fields:
         if field in data:
             setattr(part, field, data[field])
+    log_action("part.updated", "part", part.id, f"{part.name}: {diff(before, snapshot(part, part_fields))}")
     db.session.commit()
     return jsonify(part.to_dict())
 
@@ -484,6 +521,7 @@ def update_part(part_id):
 @staff_required
 def delete_part(part_id):
     part = Part.query.get_or_404(part_id)
+    log_action("part.deleted", "part", part.id, f"{part.name} (SKU {part.sku}, stock {part.stock_qty})")
     db.session.delete(part)
     db.session.commit()
     return jsonify({"message": "Part deleted"})
@@ -510,6 +548,7 @@ def add_part_to_repair(order_id):
         unit_price_at_use=part.unit_price,
     )
     db.session.add(repair_part)
+    log_action("repair.part_added", "repair", repair.order_id, f"{quantity} x {part.name} (stock now {part.stock_qty})")
     db.session.commit()
     return jsonify(repair_part.to_dict()), 201
 
@@ -522,6 +561,14 @@ def remove_part_from_repair(order_id, repair_part_id):
     part = repair_part.part
     if part:
         part.stock_qty += repair_part.quantity
+
+    log_action(
+        "repair.part_removed",
+        "repair",
+        order_id,
+        f"{repair_part.quantity} x {part.name if part else 'part'} returned to stock",
+    )
+
     db.session.delete(repair_part)
     db.session.commit()
     return jsonify({"message": "Part usage removed and stock restored"})
@@ -542,6 +589,8 @@ def create_or_update_quotation(order_id):
 
     if not items:
         return jsonify({"error": "At least one line item is required"}), 400
+    
+    is_revision = repair.quotation is not None
 
     if repair.quotation:
         # Replace items on the existing quotation and reset it to Pending.
@@ -573,5 +622,69 @@ def create_or_update_quotation(order_id):
             delivery_status="Sent",
         )
     )
+
+    total = sum(float(i.get("amount") or 0) for i in items)
+    log_action(
+        "quotation.revised" if is_revision else "quotation.sent",
+        "repair",
+        repair.order_id,
+        f"{len(items)} item(s), total PHP {total:,.2f}",
+        user=user,
+    )
+
     db.session.commit()
     return jsonify(repair.to_detail_dict(include_internal=True)), 201
+
+
+@admin_bp.route("/audit", methods=["GET"])
+@admin_only
+def audit_trail():
+    query = AuditLog.query
+    action = request.args.get("action")
+    search = request.args.get("search")
+    start = request.args.get("start")
+    end = request.args.get("end")
+    page = max(int(request.args.get("page", 1)), 1)
+    per_page = min(int(request.args.get("per_page", 25)), 100)
+
+    try:
+        if start:
+            query = query.filter(AuditLog.timestamp >= datetime.strptime(start, "%Y-%m-%d"))
+        if end:
+            query = query.filter(
+                AuditLog.timestamp < datetime.strptime(end, "%Y-%m-%d") + timedelta(days=1)
+            )
+    except ValueError:
+        return jsonify({"error": "Dates must be in YYYY-MM-DD format"}), 400
+
+    if action and action != "All":
+        query = query.filter(AuditLog.action == action)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            or_(
+                AuditLog.actor_name.ilike(like),
+                AuditLog.target_id.ilike(like),
+                AuditLog.details.ilike(like),
+            )
+        )
+
+    total = query.count()
+    logs = (
+        query.order_by(AuditLog.timestamp.desc(), AuditLog.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    actions = [
+        a for (a,) in db.session.query(AuditLog.action).distinct().order_by(AuditLog.action).all()
+    ]
+    return jsonify(
+        {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "logs": [log.to_dict() for log in logs],
+            "actions": actions,
+        }
+    )

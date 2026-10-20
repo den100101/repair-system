@@ -401,3 +401,31 @@ class Notification(db.Model):
             "delivery_status": self.delivery_status,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
         }
+
+
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    actor_name = db.Column(db.String(120))
+    actor_role = db.Column(db.String(20))
+    action = db.Column(db.String(60), nullable=False, index=True)
+    target_type = db.Column(db.String(40))
+    target_id = db.Column(db.String(60), index=True)
+    details = db.Column(db.Text)
+    ip_address = db.Column(db.String(45))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "actor_name": self.actor_name,
+            "actor_role": self.actor_role,
+            "action": self.action,
+            "target_type": self.target_type,
+            "target_id": self.target_id,
+            "details": self.details,
+            "ip_address": self.ip_address,
+            "timestamp": self.timestamp.isoformat() + "Z" if self.timestamp else None,
+        }

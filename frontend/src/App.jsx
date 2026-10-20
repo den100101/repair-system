@@ -8,6 +8,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import AdminServices from './pages/AdminServices'
 import AdminInventory from './pages/AdminInventory'
 import AdminReports from './pages/AdminReports'
+import AdminAudit from './pages/AdminAudit'
 import RepairDetail from './pages/RepairDetail'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -60,6 +61,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'technician']}>
             <AdminReports />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/audit"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminAudit />
           </ProtectedRoute>
         }
       />

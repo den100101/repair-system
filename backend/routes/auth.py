@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from extensions import db
 from models import User
+from audit import log_action
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -22,7 +23,10 @@ def register():
 
     user = User(full_name=full_name, email=email, phone=phone, role="customer")
     user.set_password(password)
+
     db.session.add(user)
+    db.session.flush()
+    log_action("auth.register", "user", user.id, f"New customer account: {email}", user=user)
     db.session.commit()
 
     token = create_access_token(
@@ -39,7 +43,10 @@ def login():
 
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
+        log_action("auth.login_failed", "user", user.id if user else None, f"Failed sign-in for {email}", user=user, commit=True)
         return jsonify({"error": "Invalid email or password"}), 401
+
+    log_action("auth.login", "user", user.id, user=user, commit=True)
 
     token = create_access_token(
         identity=str(user.id), additional_claims={"role": user.role}
@@ -53,3 +60,10 @@ def me():
     user_id = get_jwt_identity()
     user = User.query.get_or_404(user_id)
     return jsonify(user.to_dict())
+
+@auth_bp.route("/logout", methods=["POST"])
+@jwt_required()
+def logout():
+    user = db.session.get(User, int(get_jwt_identity()))
+    log_action("auth.logout", "user", user.id if user else None, user=user, commit=True)
+    return jsonify({"message": "Logged out"})
