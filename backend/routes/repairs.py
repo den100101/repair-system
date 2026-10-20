@@ -306,7 +306,7 @@ def decide_quotation(order_id):
         db.session.add(
             StatusHistory(repair_id=repair.id, status="Approved & Scheduled", actor="Customer (via quote approval)")
         )
-     log_action(
+    log_action(
         f"quotation.{decision.lower()}",
         "repair",
         repair.order_id,
